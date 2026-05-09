@@ -1,0 +1,24 @@
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "clutchcall_go",
+    srcs = ["pkg/client.go", "pkg/method_id.go"],
+    cgo = True,
+    cdeps = ["//core:clutchcall_core_ffi_lib"],
+    importpath = "github.com/clutchcall/go-sdk/pkg",
+    deps = [
+        "@com_github_quic_go_quic_go//:quic-go",
+        "@com_github_google_uuid//:uuid",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+go_test(
+    name = "clutchcall_go_test",
+    srcs = ["pkg/client_test.go"],
+    embed = [":clutchcall_go"],
+    data = ["//core:clutchcall_core_ffi.so"],
+    env = {
+        "LD_LIBRARY_PATH": "$(execpath //core:clutchcall_core_ffi.so)/../..",
+    },
+)
