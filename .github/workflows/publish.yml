@@ -1,0 +1,29 @@
+name: publish
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch: {}
+permissions:
+  contents: read
+  id-token: write
+jobs:
+  publish:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with: { go-version: '1.22' }
+      - uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: projects/875189167966/locations/global/workloadIdentityPools/github/providers/clutchcall
+          service_account: gh-publish@technomers-internal.iam.gserviceaccount.com
+      - uses: google-github-actions/setup-gcloud@v2
+      - run: |
+          MOD=github.com/clutchcall/go-sdk
+          V="${GITHUB_REF_NAME:-v1.0.0}"; case "$V" in v*) ;; *) V="v$V";; esac
+          rm -rf /tmp/gostage; D="/tmp/gostage/$MOD@$V"; mkdir -p "$D"
+          tar cf - $(git ls-files) | ( cd "$D" && tar xf - )
+          ( cd /tmp/gostage && zip -D -qr /tmp/go.zip github.com )
+          P=/tmp/goproxy/$MOD/@v; mkdir -p "$P"; cp go.mod "$P/$V.mod"; cp /tmp/go.zip "$P/$V.zip"; echo "$V" > "$P/list"
+          printf '{"Version":"%s","Time":"%s"}' "$V" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > "$P/$V.info"
+          gcloud storage rsync -r /tmp/goproxy gs://clutchcall-packages/go
