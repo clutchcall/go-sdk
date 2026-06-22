@@ -20,7 +20,7 @@ jobs:
       - uses: google-github-actions/setup-gcloud@v2
       - run: |
           MOD=github.com/clutchcall/go-sdk
-          V="${GITHUB_REF_NAME:-v1.0.0}"; case "$V" in v*) ;; *) V="v$V";; esac
+          if [ "$GITHUB_REF_TYPE" = "tag" ]; then V="$GITHUB_REF_NAME"; else V="v1.0.0"; fi
           rm -rf /tmp/gostage; D="/tmp/gostage/$MOD@$V"; mkdir -p "$D"
           tar cf - $(git ls-files) | ( cd "$D" && tar xf - )
           ( cd /tmp/gostage && zip -D -qr /tmp/go.zip github.com )
