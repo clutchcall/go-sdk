@@ -24,6 +24,9 @@ jobs:
           rm -rf /tmp/gostage; D="/tmp/gostage/$MOD@$V"; mkdir -p "$D"
           tar cf - $(git ls-files) | ( cd "$D" && tar xf - )
           ( cd /tmp/gostage && zip -D -qr /tmp/go.zip github.com )
-          P=/tmp/goproxy/$MOD/@v; mkdir -p "$P"; cp go.mod "$P/$V.mod"; cp /tmp/go.zip "$P/$V.zip"; echo "$V" > "$P/list"
-          printf '{"Version":"%s","Time":"%s"}' "$V" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > "$P/$V.info"
-          gcloud storage rsync -r /tmp/goproxy gs://clutchcall-packages/go
+          B="gs://clutchcall-packages/go/$MOD/@v"; T="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          gcloud storage cp go.mod "$B/$V.mod"
+          gcloud storage cp /tmp/go.zip "$B/$V.zip"
+          printf '{"Version":"%s","Time":"%s"}' "$V" "$T" | gcloud storage cp - "$B/$V.info"
+          printf '{"Version":"%s","Time":"%s"}' "$V" "$T" | gcloud storage cp - "$B/@latest"
+          { curl -fsSL https://artifacts.clutchcall.dev/go/$MOD/@v/list 2>/dev/null || true; echo "$V"; } | grep -vE '^$' | sort -u -V | gcloud storage cp - "$B/list"
